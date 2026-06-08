@@ -15,8 +15,10 @@
   Redis/BullMQ backend; React + TypeScript + Vite frontend, two apps
   (`hospital-portal`, `pharmacy-portal`) in a Turborepo monorepo sharing
   `packages/ui`, `packages/domain-ui`, `packages/api-types`.
-- **Repo bootstrap done**: `CLAUDE.md` (conventions + domain rules + sharing
-  strategy), `docs/PRD.md` (full spec). **No application code exists yet.**
+- **Repo bootstrap done**: `README.md`, `CONTRIBUTING.md`, `CLAUDE.md`
+  (conventions + domain rules + sharing strategy), `docs/PRD.md` (full
+  spec), `docs/adr/` (4 ADRs formalizing the stack and architecture
+  decisions below). **No application code exists yet.**
 - **`.claude/` agentic dev setup in place**: 4 read-only review agents
   (`state-machine-guardian`, `rbac-auditor`, `portal-consistency-auditor`,
   `money-display-auditor`) and 5 workflow skills (`new-feature-module`,
@@ -31,6 +33,22 @@
   modules, frontend apps, Prisma schema, auth, etc.
 
 ## Recent entries
+
+### 2026-06-08 — README, CONTRIBUTING, and ADRs
+Done:
+- Added `README.md` (repo entry point: stack summary, status, doc map) and
+  `CONTRIBUTING.md` (branching, Conventional Commits, PR/review
+  expectations, definition-of-done incl. running audit agents + logging)
+- Added `docs/adr/` with a template, an index `README.md`, and four ADRs:
+  0001 backend stack, 0002 frontend stack & monorepo, 0003 cross-portal
+  component sharing, 0004 component organization (primitives/patterns)
+- Pointed `CLAUDE.md` §"Picking up work" at `docs/adr/`
+Decided (why): formalized reasoning that was previously scattered as prose
+across `CLAUDE.md` sections and chat into permanent, numbered ADR records
+(Context/Decision/Alternatives/Consequences) — that reasoning would
+otherwise be expensive for a future contributor to reconstruct, or worse,
+get silently re-litigated from scratch.
+Status: done
 
 ### 2026-06-08 — Logging system for agent context continuity
 Done:
