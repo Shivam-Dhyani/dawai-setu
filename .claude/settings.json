@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm dev*)",
+      "Bash(pnpm test*)",
+      "Bash(pnpm lint*)",
+      "Bash(pnpm build*)",
+      "Bash(pnpm --filter * prisma *)",
+      "Bash(pnpm --filter * test*)",
+      "Bash(pnpm --filter * lint*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)"
+    ]
+  }
+}
