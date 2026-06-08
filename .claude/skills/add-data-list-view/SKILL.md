@@ -29,10 +29,13 @@ show its batch breakdown — Batch Number, Expiry Date, Quantity).
 2. **Flat list** (e.g. My Orders, Patient Case List):
    - `api/use<Thing>ListQuery.ts` — TanStack Query hook wrapping the typed
      list endpoint, accepting pagination + filter params
-   - `components/<Thing>Table.tsx` — `@tanstack/react-table` column
-     definitions matching the PRD's column spec; status values render via a
-     shared `<StatusBadge>` from `packages/ui` (don't invent a new badge
-     style per screen)
+   - `components/<Thing>Table.tsx` — feature-local column definitions
+     (matching the PRD's column spec) wired into the generic `<DataTable>`
+     wrapper from `packages/ui/patterns` (per `CLAUDE.md`'s "Component
+     organization" — the `@tanstack/react-table` plumbing is domain-agnostic
+     and shared; only the column defs are feature-local). Status values
+     render via `<StatusBadge>` from `packages/domain-ui` (don't invent a
+     new badge style per screen)
    - Row actions call mutation hooks that invalidate the list query on
      success — never mutate local state and hope it matches the server
 

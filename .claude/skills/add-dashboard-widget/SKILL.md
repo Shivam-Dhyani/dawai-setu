@@ -35,8 +35,11 @@ Orders") or its accompanying chart.
 3. **Scaffold**:
    - `api/use<Metric>Query.ts` — TanStack Query hook taking a `period`
      param (`day | week | month | quarter | year`)
-   - `components/<Metric>Card.tsx` — the count/summary card, using the
-     shared card shell from `packages/ui`
+   - `components/<Metric>Card.tsx` — the metric-specific card content
+     (number, label, trend), composed from the generic dashboard-card
+     *shell* in `packages/ui/patterns` (per `CLAUDE.md`'s "Component
+     organization" — the shell is domain-agnostic and shared; only the
+     metric content is feature-local)
    - `components/<Metric>Chart.tsx` — a Recharts component (bar/line per
      what best communicates a time-series count — match what's already used
      for similar metrics rather than introducing a new chart type per

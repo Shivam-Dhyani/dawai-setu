@@ -31,7 +31,16 @@ copy-paste.
    evidence of drift risk (e.g. one validates pincode format and the other
    doesn't).
 
-2. **Money formatting consistency (PRD §12).** All currency figures across
+2. **Generic composites duplicated instead of shared.** Per `CLAUDE.md`'s
+   "Component organization" section, domain-agnostic composites — data
+   tables, confirm dialogs, form-field groups, empty/loading/error states,
+   dashboard card shells — belong in `packages/ui/patterns`, not
+   reimplemented per portal (or even per feature within a portal). If you
+   find two `<DataTable>`-shaped components, two confirm-dialog
+   implementations, etc., flag them for consolidation into `patterns/` —
+   this is the same drift risk as #1, just one layer down the stack.
+
+3. **Money formatting consistency (PRD §12).** All currency figures across
    both portals — order totals, sub-order totals, line totals, patient case
    totals, consultation fees, taxes — must be computed via one shared
    formatting/calculation utility, not ad-hoc `toFixed(2)` or string
@@ -40,14 +49,14 @@ copy-paste.
    `medicine_cost + consultation_fee + tax` in a component when the API
    already returns `total_cost`).
 
-3. **API client and types reuse.** Both portals should consume the same
+4. **API client and types reuse.** Both portals should consume the same
    generated client/types from `packages/api-types`. Flag any hand-written
    interface that duplicates a generated type, or any portal calling
    `fetch`/`axios` directly instead of through the shared typed client —
    that's how the two portals silently drift out of sync with the backend
    contract.
 
-4. **Server vs. client state boundary** (per `CLAUDE.md`). Confirm server
+5. **Server vs. client state boundary** (per `CLAUDE.md`). Confirm server
    data flows through TanStack Query and UI/session state through Zustand in
    *both* portals consistently — not React Query in one and raw `useEffect`
    fetching in the other for the same kind of data.

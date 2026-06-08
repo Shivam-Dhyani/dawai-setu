@@ -37,9 +37,11 @@ apps/
   pharmacy-portal/      # Pharmacy operator role
   backend/              # shared NestJS API
 packages/
-  ui/                   # pure design-system primitives (shadcn/ui based) —
-                        # Button, Input, Card, Table, Badge, Modal, Toast.
-                        # Zero domain knowledge, zero API calls.
+  ui/                   # zero-domain-knowledge component kit (shadcn/ui based)
+    primitives/         #   Button, Input, Card, Badge, Modal, Toast
+    patterns/           #   DataTable, ConfirmDialog, FormFieldGroup, EmptyState
+                        #   (generic composites built FROM primitives — see
+                        #   "Component organization" below)
   domain-ui/            # shared DawaiSetu-aware components + hooks that the
                         # PRD describes identically in both portals — see
                         # "Sharing components between the two portals" below.
@@ -84,6 +86,38 @@ that silently drift apart the moment someone tweaks validation in only one.
 component once and then letting one portal's copy evolve while the other
 doesn't. The `portal-consistency-auditor` agent exists specifically to catch
 this — run it after any change to a shared-shape module.
+
+## Component organization (within `packages/ui`)
+
+We deliberately **do not use the full Atomic Design taxonomy** (atoms /
+molecules / organisms / templates / pages). It organizes components by
+*abstraction level* rather than by *domain*, which fights this project's
+core philosophy of "one feature = one module, end to end" — in practice it
+produces endless "is this a molecule or an organism?" debates and scatters
+domain-related components across complexity-tiered folders instead of
+keeping them together by feature. Use this flatter, two-tier split instead:
+
+- **`packages/ui/primitives/`** — the shadcn/ui-based building blocks
+  (`Button`, `Input`, `Card`, `Badge`, `Modal`, `Toast`). Pure, no
+  composition of other components, no domain knowledge.
+- **`packages/ui/patterns/`** — generic composites *built from* primitives
+  that still carry zero domain knowledge (`DataTable`, `ConfirmDialog`,
+  `FormFieldGroup`, `EmptyState`). They could ship in a component library
+  for an unrelated product.
+
+**Decision rule** for "where does this component go" (apply top to bottom,
+stop at the first match):
+1. Could it exist in a design system for a completely unrelated product, and
+   composes nothing else? → `packages/ui/primitives`
+2. Same as above, but composed from other primitives? → `packages/ui/patterns`
+3. Does the PRD describe it identically in both portals (see "Sharing
+   components" above)? → `packages/domain-ui`
+4. Otherwise → portal-local `features/<feature>/components`
+
+This gets you the genuine benefit people reach for Atomic Design for —
+a clear primitive → composite → screen hierarchy and consistent reuse —
+without forcing a five-level taxonomy onto a codebase that's organized by
+domain module everywhere else.
 
 ## Domain rules an agent must never violate
 
