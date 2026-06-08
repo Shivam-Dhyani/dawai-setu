@@ -5,6 +5,16 @@ external pharmacies. Full functional spec lives in `docs/PRD.md` — read it
 before making domain-level decisions; this file covers *how we build*, not
 *what we build*.
 
+## Picking up work
+
+Before starting any non-trivial task, read `docs/PROGRESS_LOG.md` — its
+"Current State" summary and recent entries give you, in one read, what's
+been built and decided so far (and why), so you don't burn tokens
+re-deriving it from the codebase or re-litigating settled decisions. As the
+**last step** of any task that changes code or records a decision, use the
+`log-progress` skill to append an entry — it knows the format and keeps the
+log bounded so it stays worth reading for the life of the project.
+
 ## Core philosophy
 
 1. **Clean & modular** — one feature = one module, end to end (backend module
