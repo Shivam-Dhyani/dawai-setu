@@ -15,6 +15,13 @@ re-deriving it from the codebase or re-litigating settled decisions. As the
 `log-progress` skill to append an entry — it knows the format and keeps the
 log bounded so it stays worth reading for the life of the project.
 
+For *why* a major architectural choice was made — stack, monorepo
+structure, component-sharing model — check `docs/adr/` before assuming the
+reasoning isn't written down anywhere. If you're about to make (or
+overturn) a decision of that weight, write a new ADR rather than letting it
+live only in a commit message or a chat transcript; see `docs/adr/README.md`
+for the format and the "supersede, don't silently edit" convention.
+
 ## Core philosophy
 
 1. **Clean & modular** — one feature = one module, end to end (backend module
