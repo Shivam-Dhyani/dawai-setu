@@ -27,9 +27,11 @@ scope that was explicitly cut.
    (`total_cost`, `line_total`, `total_price` per the §13 data model) over
    client-side recomputation. If the frontend *must* compute something for
    immediate UI feedback (e.g. a live cart total before placing an order),
-   flag whether that calculation is centralized in one shared utility — not
-   copy-pasted per component — so a future formula change doesn't require
-   hunting down N call sites.
+   confirm that calculation lives in `packages/domain-ui` (per `CLAUDE.md`'s
+   "Sharing components between the two portals" — `<MoneyDisplay>` and its
+   backing utilities are the designated single source) — not copy-pasted per
+   component or per portal — so a future formula change doesn't require
+   hunting down N call sites across two codebases.
 
 3. **Consistent formatting.** Currency symbol, decimal places, and
    thousands separators should be uniform across both portals (ties into

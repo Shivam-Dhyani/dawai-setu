@@ -37,12 +37,53 @@ apps/
   pharmacy-portal/      # Pharmacy operator role
   backend/              # shared NestJS API
 packages/
-  ui/                   # shared component kit (shadcn/ui based)
+  ui/                   # pure design-system primitives (shadcn/ui based) —
+                        # Button, Input, Card, Table, Badge, Modal, Toast.
+                        # Zero domain knowledge, zero API calls.
+  domain-ui/            # shared DawaiSetu-aware components + hooks that the
+                        # PRD describes identically in both portals — see
+                        # "Sharing components between the two portals" below.
   api-types/            # generated from backend OpenAPI spec
   config/               # shared eslint/tsconfig/tailwind config
 docs/
   PRD.md
 ```
+
+## Sharing components between the two portals
+
+Hospital Portal and Pharmacy Portal are separate apps but the PRD describes
+large parts of them — auth, profile, geography, money display, status
+vocabulary, dashboards — as deliberately mirroring each other (e.g. §11.1's
+pharmacy signup is the doctor signup "minus Specialization, plus Pharmacy
+Name"). Use this three-tier model to decide where something belongs:
+
+1. **`packages/ui`** — pure presentational primitives with no domain
+   knowledge. If it could be reused by a completely unrelated product,
+   it belongs here.
+2. **`packages/domain-ui`** — components and hooks that *are* DawaiSetu-aware
+   but the PRD specifies identically for both portals:
+   `<StateCityPicker>` + `useStatesQuery`/`useCitiesQuery` (signup + profile,
+   both portals), `<MoneyDisplay>` + the cost-calculation utilities backing
+   PRD §12 (the single source of truth `money-display-auditor` checks
+   against), `<StatusBadge>` (order/inventory status → label/color),
+   `<PeriodFilter>` (day/week/month/[quarter]/year), the OTP-input and
+   password-reset flow shells.
+3. **Portal-local `features/`** — anything the PRD scopes to one role:
+   Request Medicine Stock cart, My Orders accept/reject, Patient Case
+   consultation form, Manage Default Rx. Do not pre-share these just because
+   they look similar today — a shared abstraction here becomes a
+   straitjacket as the two diverge.
+
+**Composition over duplication for "mostly the same, not identical" forms.**
+Signup is the canonical example: build *one* shared form shell in
+`packages/domain-ui` driven by a role-specific field config/slot (Doctor adds
+Specialization; Pharmacy swaps in Pharmacy Name), rather than two near-copies
+that silently drift apart the moment someone tweaks validation in only one.
+
+**Drift is the real risk, not under-sharing.** The failure mode is sharing a
+component once and then letting one portal's copy evolve while the other
+doesn't. The `portal-consistency-auditor` agent exists specifically to catch
+this — run it after any change to a shared-shape module.
 
 ## Domain rules an agent must never violate
 

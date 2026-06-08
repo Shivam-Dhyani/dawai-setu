@@ -20,10 +20,14 @@ copy-paste.
    directories for parallel implementations of: signup/signin/OTP forms,
    profile edit forms, geography (state→city cascading) selectors, password
    reset flows, dashboard card/chart shells, and money/total formatting
-   (PRD §12). If the same component shape (markup + behavior, even if a
-   couple of fields differ) exists in both `apps/hospital-portal/src` and
-   `apps/pharmacy-portal/src`, flag it as a candidate for `packages/ui` or a
-   shared hook in a common package — and point to the second instance as
+   (PRD §12). Per `CLAUDE.md`'s "Sharing components between the two portals"
+   model, these belong in `packages/domain-ui` (DawaiSetu-aware shared
+   components/hooks), not duplicated per portal. If the same component shape
+   (markup + behavior, even if a couple of fields differ — e.g. signup's
+   Specialization vs. Pharmacy Name) exists separately in
+   `apps/hospital-portal/src` and `apps/pharmacy-portal/src`, flag it as a
+   candidate for a shared, config-driven component in `packages/domain-ui`
+   (composition over duplication) — and point to the second instance as
    evidence of drift risk (e.g. one validates pincode format and the other
    doesn't).
 

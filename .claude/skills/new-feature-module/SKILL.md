@@ -43,7 +43,13 @@ from the PRD: Patient Cases, Request Medicine Stock, Near-Expiry Stock.
 3. **Frontend** — create `apps/<portal>/src/features/<module-name>/`:
    - `api/` — TanStack Query hooks (`use<Thing>Query`, `use<Thing>Mutation`)
      calling the typed client from `packages/api-types`
-   - `components/` — presentational pieces
+   - `components/` — presentational pieces, built from `packages/ui`
+     primitives and (where the PRD describes the same component for both
+     portals — geography pickers, money display, status badges, period
+     filters) `packages/domain-ui` — see `CLAUDE.md`'s "Sharing components
+     between the two portals". Don't duplicate something that belongs there;
+     equally, don't push something into `packages/domain-ui` just because it
+     looks similar today if the PRD scopes it to one role only
    - `pages/` — route-level components wired into the router
    - Co-locate `*.test.tsx` files
 
