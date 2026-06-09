@@ -1,0 +1,11 @@
+{
+  "name": "@dawai-setu/config",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./tsconfig/base": "./tsconfig/base.json",
+    "./tsconfig/nestjs": "./tsconfig/nestjs.json",
+    "./tsconfig/react": "./tsconfig/react.json",
+    "./eslint/base": "./eslint/base.js"
+  }
+}

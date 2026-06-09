@@ -1,0 +1,30 @@
+{
+  "name": "dawai-setu",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "db:migrate": "pnpm --filter backend prisma migrate dev",
+    "db:generate": "pnpm --filter backend prisma generate",
+    "db:seed": "pnpm --filter backend prisma db seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "prettier": "^3.3.0",
+    "prettier-plugin-tailwindcss": "^0.6.0"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "printWidth": 100,
+    "plugins": ["prettier-plugin-tailwindcss"]
+  }
+}

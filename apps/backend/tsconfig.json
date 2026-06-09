@@ -1,0 +1,11 @@
+{
+  "extends": "@dawai-setu/config/tsconfig/nestjs",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*", "prisma/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

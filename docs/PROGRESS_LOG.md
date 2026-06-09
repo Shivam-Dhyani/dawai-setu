@@ -11,28 +11,48 @@
 
 ## Current State
 
-- **Stack chosen** (not yet scaffolded): NestJS + Prisma + PostgreSQL +
-  Redis/BullMQ backend; React + TypeScript + Vite frontend, two apps
-  (`hospital-portal`, `pharmacy-portal`) in a Turborepo monorepo sharing
-  `packages/ui`, `packages/domain-ui`, `packages/api-types`.
-- **Repo bootstrap done**: `README.md`, `CONTRIBUTING.md`, `CLAUDE.md`
-  (conventions + domain rules + sharing strategy), `docs/PRD.md` (full
-  spec), `docs/adr/` (4 ADRs formalizing the stack and architecture
-  decisions below). **No application code exists yet.**
-- **`.claude/` agentic dev setup in place**: 4 read-only review agents
-  (`state-machine-guardian`, `rbac-auditor`, `portal-consistency-auditor`,
-  `money-display-auditor`) and 5 workflow skills (`new-feature-module`,
-  `db-schema-change`, `add-data-list-view`, `add-dashboard-widget`,
-  `log-progress`).
-- **Frontend architecture decided**: 3-tier component sharing
-  (`packages/ui` primitives/patterns → `packages/domain-ui` →
-  portal-local `features/`); explicitly rejected full Atomic Design for a
-  flatter primitives/patterns split — see `CLAUDE.md` §"Sharing components
-  between the two portals" and §"Component organization".
-- **Not started**: any actual application code — monorepo skeleton, backend
-  modules, frontend apps, Prisma schema, auth, etc.
+- **Stack chosen and scaffolded**: NestJS + Prisma + PostgreSQL + Redis/BullMQ
+  backend; React + TypeScript + Vite frontend (two apps: `hospital-portal`,
+  `pharmacy-portal`) in a Turborepo monorepo sharing `packages/ui`,
+  `packages/domain-ui`, `packages/api-types`.
+- **Backend fully scaffolded**: Prisma schema, all 11 feature modules written
+  (`geography`, `medicines`, `inventory`, `orders`, `pharmacy-orders`,
+  `patient-cases`, `default-rx`, `profile`, `dashboard`, `roles`,
+  `notifications`), plus `auth` (JWT, OTP, password reset), common guards
+  (`JwtAuthGuard`, `PermissionsGuard`), decorators, and interceptors. Prisma
+  client not yet generated — run `pnpm db:migrate` before first boot.
+- **Domain invariants enforced in code**: inventory NEAR_EXPIRY/EXPIRED derived
+  at query time (never stored); all stock mutations in `$transaction` with
+  atomic `updateMany` decrement; PRD §12 cost formula (medicine_cost +
+  consultation_fee + tax) computed in `patient-cases` service from
+  `TAX_RATE_PERCENT` env.
+- **RBAC**: data-driven via `role_permissions` rows; no hardcoded role-name
+  checks anywhere; `PermissionsGuard` queries DB at request time.
+- **Repo/agentic setup**: `README.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `docs/PRD.md`,
+  `docs/adr/` (4 ADRs), 4 review agents, 5+ workflow skills — all in place.
+- **Not started**: frontend apps, `packages/ui`/`domain-ui`, Prisma seed,
+  BullMQ job workers, email/OTP transport wiring.
 
 ## Recent entries
+
+### 2026-06-09 — All backend feature modules scaffolded
+Done:
+- Created `orders`, `pharmacy-orders`, `patient-cases`, `default-rx`,
+  `profile`, `dashboard`, `roles`, `notifications` (module + controller +
+  service + dto/ each); `geography`, `medicines`, `inventory` were pre-built
+- `pharmacy-orders` accept: single `$transaction` with atomic `updateMany`
+  check-and-decrement across FIFO pharmacy batches + hospital batch creation
+- `patient-cases` create: FIFO `$transaction` dispense across READY_TO_USE
+  batches + PRD §12 cost formula (`TAX_RATE_PERCENT` env)
+- `dashboard`: doctor vs pharmacist branch resolved by querying
+  `role_permissions` at runtime — no hardcoded role names
+- Notifications created on sub-order accept/reject
+Decided (why): dashboard role-branch via DB permission query (not
+`role === 'DOCTOR'`) — consistent with PRD §6's data-driven RBAC rule;
+avoids a code change if roles are renamed or split later.
+Next: generate Prisma client (`pnpm db:migrate`), seed roles/permissions,
+scaffold frontend apps
+Status: done
 
 ### 2026-06-08 — README, CONTRIBUTING, and ADRs
 Done:

@@ -1,0 +1,443 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Roles & Permissions (data-driven RBAC — PRD §6) ─────────────────────────
+//
+// Permissions are rows, not code. Guards query role_permissions at request
+// time — no `if (role === 'doctor')` checks anywhere in the codebase.
+// New roles and new permissions are added by inserting rows, not by changing
+// source code (PRD §6.2).
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  permissions RolePermission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  id     String @id @default(cuid())
+  roleId String @map("role_id")
+  module String // e.g. PATIENT_CASES_MANAGEMENT, REQUEST_MEDICINE_STOCK
+  action String // READ | CREATE | UPDATE | DELETE
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, module, action])
+  @@map("role_permissions")
+}
+
+// ─── Geography reference data ─────────────────────────────────────────────────
+
+model State {
+  id   String @id @default(cuid())
+  name String @unique
+  code String @unique
+
+  cities City[]
+
+  @@map("states")
+}
+
+model City {
+  id      String @id @default(cuid())
+  name    String
+  stateId String @map("state_id")
+
+  state State @relation(fields: [stateId], references: [id])
+
+  @@unique([name, stateId])
+  @@map("cities")
+}
+
+// ─── Hospital ─────────────────────────────────────────────────────────────────
+
+model Hospital {
+  id        String   @id @default(cuid())
+  name      String
+  state     String
+  city      String
+  address   String
+  pincode   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  users           User[]
+  inventoryBatches HospitalInventoryBatch[]
+  orders          Order[]
+
+  @@map("hospitals")
+}
+
+// ─── Users (hospital staff) ───────────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(cuid())
+  roleId        String     @map("role_id")
+  hospitalId    String?    @map("hospital_id")
+  firstName     String     @map("first_name")
+  lastName      String     @map("last_name")
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  phone         String
+  state         String
+  city          String
+  address       String
+  pincode       String
+  status        UserStatus @default(ACTIVE)
+  emailVerified Boolean    @default(false) @map("email_verified")
+  // Doctor-only: fee used in patient case total (PRD §12)
+  consultationFee Decimal? @map("consultation_fee") @db.Decimal(10, 2)
+  // Pharmacist-only: pre-fills the "Needed Qty" field in the order cart
+  defaultNeededQty Int     @default(100) @map("default_needed_qty")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  role            Role                @relation(fields: [roleId], references: [id])
+  hospital        Hospital?           @relation(fields: [hospitalId], references: [id])
+  specializations UserSpecialization[]
+  patientCases    PatientCase[]
+  orders          Order[]
+  defaultRxItems  DefaultRx[]
+
+  @@map("users")
+}
+
+model UserSpecialization {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  name   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_specializations")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// ─── Pharmacy ─────────────────────────────────────────────────────────────────
+
+model Pharmacy {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  phone         String
+  state         String
+  city          String
+  address       String
+  pincode       String
+  licenseNo     String?        @map("license_no")
+  status        PharmacyStatus @default(ACTIVE)
+  emailVerified Boolean        @default(false) @map("email_verified")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  inventoryBatches PharmacyInventoryBatch[]
+  subOrders        SubOrder[]
+
+  @@map("pharmacies")
+}
+
+enum PharmacyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+// ─── Medicine master data ─────────────────────────────────────────────────────
+
+model Medicine {
+  id         String @id @default(cuid())
+  name       String @unique
+  indication String // "used for" per PRD §7
+
+  hospitalBatches  HospitalInventoryBatch[]
+  pharmacyBatches  PharmacyInventoryBatch[]
+  orderLineItems   OrderLineItem[]
+  patientCaseMeds  PatientCaseMedicine[]
+  defaultRxItems   DefaultRx[]
+
+  @@map("medicines")
+}
+
+// ─── Hospital Inventory ───────────────────────────────────────────────────────
+//
+// Readiness state machine (PRD §8):
+//   RECEIVED_PENDING → READY_TO_USE    (pharmacist marks ready)
+//
+// NEAR_EXPIRY and EXPIRED are NOT stored states — they are derived at read
+// time by comparing expiry_date to the current date:
+//   NEAR_EXPIRY : expiry_date within 3 months AND readiness_state = READY_TO_USE
+//   EXPIRED     : expiry_date < now()  — excluded from prescribing queries
+//
+// Storing them would require a background job to flip rows and would make
+// readiness_state unreliable for concurrent queries. Deriving is simpler
+// and always accurate.
+
+model HospitalInventoryBatch {
+  id               String         @id @default(cuid())
+  hospitalId       String         @map("hospital_id")
+  medicineId       String         @map("medicine_id")
+  batchNo          String         @map("batch_no")
+  expiryDate       DateTime       @map("expiry_date")
+  quantity         Int
+  readinessState   ReadinessState @default(RECEIVED_PENDING) @map("readiness_state")
+  unitCost         Decimal?       @map("unit_cost") @db.Decimal(10, 2)
+  sourcePharmacyId String?        @map("source_pharmacy_id")
+  subOrderId       String?        @map("sub_order_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  hospital Hospital  @relation(fields: [hospitalId], references: [id])
+  medicine Medicine  @relation(fields: [medicineId], references: [id])
+  subOrder SubOrder? @relation(fields: [subOrderId], references: [id])
+
+  @@map("hospital_inventory_batches")
+}
+
+// Only two stored readiness states — near-expiry/expired are derived.
+enum ReadinessState {
+  RECEIVED_PENDING
+  READY_TO_USE
+}
+
+// ─── Pharmacy Inventory ───────────────────────────────────────────────────────
+
+model PharmacyInventoryBatch {
+  id         String   @id @default(cuid())
+  pharmacyId String   @map("pharmacy_id")
+  medicineId String   @map("medicine_id")
+  batchNo    String   @map("batch_no")
+  expiryDate DateTime @map("expiry_date")
+  quantity   Int
+  unitPrice  Decimal  @map("unit_price") @db.Decimal(10, 2)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id])
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  @@map("pharmacy_inventory_batches")
+}
+
+// ─── Orders & Sub-orders ──────────────────────────────────────────────────────
+//
+// Order lifecycle (PRD §9):
+//   PENDING → ACCEPTED → COMPLETED
+//   PENDING → REJECTED
+//   PENDING → CANCELLED  (pharmacist cancels while still PENDING)
+//
+// Sub-orders are always accepted or rejected in full — no partial fulfillment.
+// A sub-order reaches COMPLETED only after the pharmacist marks the received
+// stock READY_TO_USE (the two-step flow: accept → receive → mark-ready).
+
+model Order {
+  id          String      @id @default(cuid())
+  hospitalId  String      @map("hospital_id")
+  createdById String      @map("created_by")
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  hospital  Hospital   @relation(fields: [hospitalId], references: [id])
+  createdBy User       @relation(fields: [createdById], references: [id])
+  subOrders SubOrder[]
+
+  @@map("orders")
+}
+
+model SubOrder {
+  id         String         @id @default(cuid())
+  orderId    String         @map("order_id")
+  pharmacyId String         @map("pharmacy_id")
+  status     SubOrderStatus @default(PENDING)
+  totalPrice Decimal        @map("total_price") @db.Decimal(12, 2)
+  // Audit trail: who resolved and when (PRD §15)
+  resolvedAt DateTime?      @map("resolved_at")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+
+  order           Order                    @relation(fields: [orderId], references: [id])
+  pharmacy        Pharmacy                 @relation(fields: [pharmacyId], references: [id])
+  lineItems       OrderLineItem[]
+  receivedBatches HospitalInventoryBatch[]
+
+  @@map("sub_orders")
+}
+
+model OrderLineItem {
+  id         String  @id @default(cuid())
+  subOrderId String  @map("sub_order_id")
+  medicineId String  @map("medicine_id")
+  neededQty  Int     @map("needed_qty")
+  unitPrice  Decimal @map("unit_price") @db.Decimal(10, 2)
+  lineTotal  Decimal @map("line_total") @db.Decimal(12, 2)
+
+  subOrder SubOrder @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  @@map("order_line_items")
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum SubOrderStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+// ─── Patient Cases ────────────────────────────────────────────────────────────
+
+model PatientCase {
+  id              String   @id @default(cuid())
+  doctorId        String   @map("doctor_id")
+  patientName     String   @map("patient_name")
+  // Free-entry arrays: doctor selects from existing or types a new value
+  symptoms        String[]
+  diseases        String[]
+  remarks         String?
+  // Cost breakdown stored at case creation time (PRD §12)
+  consultationFee Decimal  @map("consultation_fee") @db.Decimal(10, 2)
+  medicineCost    Decimal  @map("medicine_cost") @db.Decimal(12, 2)
+  tax             Decimal  @db.Decimal(10, 2)
+  totalCost       Decimal  @map("total_cost") @db.Decimal(12, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  doctor    User                  @relation(fields: [doctorId], references: [id])
+  medicines PatientCaseMedicine[]
+
+  @@map("patient_cases")
+}
+
+model PatientCaseMedicine {
+  id           String         @id @default(cuid())
+  caseId       String         @map("case_id")
+  medicineId   String         @map("medicine_id")
+  dose         String
+  days         Int
+  frequency    DoseFrequency
+  whenToTake   WhenToTake?    @map("when_to_take")
+  dispensedQty Int            @map("dispensed_qty")
+
+  case     PatientCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  medicine Medicine    @relation(fields: [medicineId], references: [id])
+
+  @@map("patient_case_medicines")
+}
+
+// ─── Default Rx ───────────────────────────────────────────────────────────────
+
+model DefaultRx {
+  id         String         @id @default(cuid())
+  doctorId   String         @map("doctor_id")
+  medicineId String         @map("medicine_id")
+  dose       String?
+  days       Int?
+  frequency  DoseFrequency?
+  whenToTake WhenToTake?    @map("when_to_take")
+
+  doctor   User     @relation(fields: [doctorId], references: [id])
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  @@unique([doctorId, medicineId])
+  @@map("default_rx")
+}
+
+enum DoseFrequency {
+  ONCE_A_DAY
+  TWICE_A_DAY
+  THRICE_A_DAY
+  ONCE_IN_3_DAYS
+  ONCE_IN_4_DAYS
+  ONCE_A_WEEK
+}
+
+enum WhenToTake {
+  BEFORE_BREAKFAST
+  AFTER_BREAKFAST
+  BEFORE_LUNCH
+  AFTER_LUNCH
+  BEFORE_DINNER
+  AFTER_DINNER
+}
+
+// ─── OTP ──────────────────────────────────────────────────────────────────────
+
+model Otp {
+  id        String     @id @default(cuid())
+  email     String
+  code      String
+  purpose   OtpPurpose
+  expiresAt DateTime   @map("expires_at")
+  usedAt    DateTime?  @map("used_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@index([email, purpose])
+  @@map("otps")
+}
+
+enum OtpPurpose {
+  EMAIL_VERIFICATION
+  FORGOT_PASSWORD
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id            String                    @id @default(cuid())
+  recipientId   String                    @map("recipient_id")
+  recipientType NotificationRecipientType @map("recipient_type")
+  type          String
+  payload       Json
+  readAt        DateTime?                 @map("read_at")
+  createdAt     DateTime                  @default(now()) @map("created_at")
+
+  @@index([recipientId, recipientType])
+  @@map("notifications")
+}
+
+enum NotificationRecipientType {
+  USER
+  PHARMACY
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+// Records who/when for every state-changing action (PRD §15):
+// order accept/reject, mark-ready-to-use, dispense.
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorId      String   @map("actor_id")
+  actorType    String   @map("actor_type")
+  action       String   // ORDER_ACCEPTED | BATCH_MARKED_READY | MEDICINE_DISPENSED …
+  resourceId   String   @map("resource_id")
+  resourceType String   @map("resource_type")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([resourceId, resourceType])
+  @@map("audit_logs")
+}
