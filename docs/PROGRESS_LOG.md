@@ -30,10 +30,40 @@
   checks anywhere; `PermissionsGuard` queries DB at request time.
 - **Repo/agentic setup**: `README.md`, `CONTRIBUTING.md`, `CLAUDE.md`, `docs/PRD.md`,
   `docs/adr/` (4 ADRs), 4 review agents, 5+ workflow skills — all in place.
-- **Not started**: frontend apps, `packages/ui`/`domain-ui`, Prisma seed,
-  BullMQ job workers, email/OTP transport wiring.
+- **Frontend fully scaffolded**: `hospital-portal` (AppLayout, auth 4 pages,
+  dashboard, patient-cases list/new/detail, default-rx, request-stock, orders,
+  inventory, near-expiry, expired, profile) and `pharmacy-portal` (AppLayout,
+  auth 4 pages, dashboard, my-orders accept/reject, profile). Shared
+  `packages/ui` (Button, Input, Badge, Card, DataTable, EmptyState,
+  ConfirmDialog) and `packages/domain-ui` (StateCityPicker, MoneyDisplay,
+  StatusBadge, PeriodFilter, OtpInput) complete.
+- **Not started**: Prisma seed run + DB migration, BullMQ job workers, email/OTP
+  transport wiring, API types codegen from OpenAPI spec.
 
 ## Recent entries
+
+### 2026-06-09 — Full application scaffold (frontend portals + shared packages)
+Done:
+- `packages/ui`: Button, Input, Badge, Card, DataTable, EmptyState, ConfirmDialog
+- `packages/domain-ui`: StateCityPicker, MoneyDisplay, StatusBadge, PeriodFilter,
+  OtpInput, useGeography hooks
+- `hospital-portal`: AppLayout (role-aware sidebar), auth (SignIn/SignUp/
+  VerifyEmail/ForgotPassword), dashboard (charts + period filter), patient-cases
+  (list/new/detail with medicine fieldArray), default-rx, request-stock (cart +
+  pharmacy picker), orders list, inventory (mark-ready), near-expiry, expired,
+  profile
+- `pharmacy-portal`: full app scaffold — auth 4 pages, dashboard stats, my-orders
+  (pending accept/reject + history table), profile
+- Fixed `auth.service.ts` `hospitalSignIn` to include `roleName` in response
+  (sanitizeUser only returned id/name/email/roleId — missing for nav branching)
+- All API hooks use `accessToken` → normalised to `token`; VerifyOtpDto uses
+  `code`, ForgetPasswordDto uses `confirmNewPassword`
+Decided (why): pharmacy-portal has no inventory/near-expiry/expired pages —
+the `inventory` controller is scoped to `hospitalId`; pharmacy stock is
+managed implicitly via sub-order accept (atomic `updateMany` decrement).
+Next: run `pnpm db:migrate && pnpm db:seed`, wire nodemailer OTP transport,
+implement BullMQ workers for async notifications, run `pnpm dev` end-to-end
+Status: done
 
 ### 2026-06-09 — All backend feature modules scaffolded
 Done:
