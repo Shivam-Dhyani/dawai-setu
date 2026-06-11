@@ -42,6 +42,16 @@
 
 ## Recent entries
 
+### 2026-06-11 — Add apps/backend/.env.example for local DB setup
+Done:
+- Added `apps/backend/.env.example` (copy of root `.env.example`)
+Decided (why): NestJS's `ConfigModule` (`envFilePath: '.env'`) and the
+Prisma CLI both resolve `.env` relative to `apps/backend` (their cwd under
+`pnpm --filter`), but only a root `.env.example` existed — `pnpm db:migrate`
+failed with "Environment variable not found: DATABASE_URL" (P1012). Users
+must still copy this to `apps/backend/.env` locally (not committed).
+Status: done
+
 ### 2026-06-11 — Fix `pnpm db:seed`/`db:migrate`/`db:generate` script invocation
 Done:
 - Root `package.json`: changed `pnpm --filter backend prisma ...` to
