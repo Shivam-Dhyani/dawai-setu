@@ -42,6 +42,16 @@
 
 ## Recent entries
 
+### 2026-06-11 — Fix `states.find is not a function` crash on signup
+Done:
+- `packages/domain-ui/src/hooks/useGeography.ts`: prefixed
+  `useStatesQuery`/`useCitiesQuery` axios calls with `/api`
+Decided (why): the hooks used a bare global `axios` instance hitting
+`/geography/*` directly, bypassing both portals' Vite `/api` proxy; the
+unmatched route returned the SPA's `index.html` as a string, so
+`states.find` threw in `StateCityPicker` on every signup/profile page.
+Status: done
+
 ### 2026-06-11 — Fix missing `packageManager` field for local dev
 Done:
 - Added `"packageManager": "pnpm@10.34.2"` to root `package.json`
