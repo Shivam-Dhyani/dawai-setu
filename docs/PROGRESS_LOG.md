@@ -42,6 +42,15 @@
 
 ## Recent entries
 
+### 2026-06-11 — Fix missing `packageManager` field for local dev
+Done:
+- Added `"packageManager": "pnpm@10.34.2"` to root `package.json`
+Decided (why): Turborepo 2.x requires this field to resolve pnpm
+workspaces; without it `pnpm dev` fails with "Could not resolve
+workspaces. Missing `packageManager` field in package.json" — hit when
+the user cloned the repo and ran `pnpm dev` locally.
+Status: done
+
 ### 2026-06-09 — Full application scaffold (frontend portals + shared packages)
 Done:
 - `packages/ui`: Button, Input, Badge, Card, DataTable, EmptyState, ConfirmDialog
