@@ -42,6 +42,17 @@
 
 ## Recent entries
 
+### 2026-06-11 — Fix `pnpm db:seed`/`db:migrate`/`db:generate` script invocation
+Done:
+- Root `package.json`: changed `pnpm --filter backend prisma ...` to
+  `pnpm --filter backend exec prisma ...` for `db:migrate`, `db:generate`,
+  `db:seed`
+Decided (why): `pnpm --filter <pkg> prisma ...` resolves `prisma` as a
+package script (none exists in `apps/backend/package.json`), failing with
+`ERR_PNPM_RECURSIVE_RUN_NO_SCRIPT`; `exec` runs the prisma CLI binary
+directly.
+Status: done
+
 ### 2026-06-11 — Fix `states.find is not a function` crash on signup
 Done:
 - `packages/domain-ui/src/hooks/useGeography.ts`: prefixed
