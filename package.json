@@ -2,6 +2,7 @@
   "name": "dawai-setu",
   "version": "0.0.1",
   "private": true,
+  "packageManager": "pnpm@10.34.2",
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
